@@ -494,7 +494,10 @@ int printMetrics(size_t cols, bool mining)
                         chainActive.Contains(mapBlockIndex[hash])) {
                     int height = mapBlockIndex[hash]->nHeight;
                     CAmount subsidy = consensusParams.GetBlockSubsidy(height);
-                    if ((height > 0) && (height <= consensusParams.GetLastFoundersRewardBlockHeight(height))) {
+                    // The Founders' Reward only exists before Canopy (ZIP 207).
+                    if ((height > 0) &&
+                        !consensusParams.NetworkUpgradeActive(height, Consensus::UPGRADE_CANOPY) &&
+                        (height <= consensusParams.GetLastFoundersRewardBlockHeight(height))) {
                         subsidy -= subsidy/5;
                     }
                     if (std::max(0, COINBASE_MATURITY - (tipHeight - height)) > 0) {
