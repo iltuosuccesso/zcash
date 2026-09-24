@@ -10,6 +10,7 @@
 #endif
 
 #include "amount.h"
+#include "blocksign.h"
 #include "chainparams.h"
 #include "consensus/consensus.h"
 #include "consensus/funding.h"
@@ -447,6 +448,20 @@ CBlockTemplate* BlockAssembler::CreateNewBlock(
 
     // Fill in header
     pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
+
+    // Tcoin: sign the block template if this network requires block
+    // signatures. This must happen before the NU5 block commitments below are
+    // computed, because they cover the coinbase scriptSig.
+    if (!chainparams.BlockSignerPubKeys().empty()) {
+        if (!g_blockSigningKey.has_value()) {
+            throw std::runtime_error(strprintf(
+                "%s: this network requires signed blocks; start the node with -blocksignkeyfile", __func__));
+        }
+        if (!SignBlock(*pblock, nHeight, g_blockSigningKey.value())) {
+            throw std::runtime_error(strprintf(
+                "%s: could not sign the block template (the coinbase must be a v5 transaction)", __func__));
+        }
+    }
     if (chainparams.GetConsensus().NetworkUpgradeActive(nHeight, Consensus::UPGRADE_NU5)) {
         // hashBlockCommitments depends on the block transactions, so we have to
         // update it whenever the coinbase transaction changes.
@@ -797,7 +812,15 @@ void IncrementExtraNonce(
     ++nExtraNonce;
     unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2
     CMutableTransaction txCoinbase(pblock->vtx[0]);
-    txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
+    // Tcoin: keep the block signature, if any, right after the height. The
+    // coinbase of a signed block is v5, so changing the extra nonce does not
+    // change the merkle root and the signature stays valid.
+    CScript scriptSig = CScript() << nHeight;
+    auto blockSignature = ExtractBlockSignature(pblock->vtx[0]);
+    if (blockSignature.has_value()) {
+        scriptSig << blockSignature.value();
+    }
+    txCoinbase.vin[0].scriptSig = (scriptSig << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;
     assert(txCoinbase.vin[0].scriptSig.size() <= 100);
 
     pblock->vtx[0] = txCoinbase;

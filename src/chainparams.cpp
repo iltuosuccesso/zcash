@@ -248,6 +248,13 @@ public:
         // chain cannot have.
         fZIP209Enabled = true;
 
+        // Tcoin: the public keys of the pool's block signers, as compressed
+        // hex keys (66 characters). Only blocks signed by one of them are
+        // valid. The list must be filled before launch: while it is empty,
+        // init refuses to start a node on this network, because anyone could
+        // mine it.
+        vBlockSignerPubKeys = {};
+
         // Tcoin: no Founders' Reward. Canopy is active from block 1, which
         // switches the Founders' Reward rule off, and the list stays empty so
         // that no Zcash address can ever receive part of a Tcoin block.
@@ -425,6 +432,13 @@ public:
         // to bootstrap Zcash nodes with legacy block index data, which a new
         // chain cannot have.
         fZIP209Enabled = true;
+
+        // Tcoin: the public keys of the pool's block signers, as compressed
+        // hex keys (66 characters). Only blocks signed by one of them are
+        // valid. The list must be filled before launch: while it is empty,
+        // init refuses to start a node on this network, because anyone could
+        // mine it.
+        vBlockSignerPubKeys = {};
 
         // Tcoin: no Founders' Reward. Canopy is active from block 1, which
         // switches the Founders' Reward rule off, and the list stays empty so

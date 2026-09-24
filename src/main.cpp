@@ -9,6 +9,7 @@
 #include "addrman.h"
 #include "alert.h"
 #include "arith_uint256.h"
+#include "blocksign.h"
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "checkqueue.h"
@@ -5917,6 +5918,16 @@ bool ContextualCheckBlock(
             !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin())) {
             return state.DoS(100, error("%s: block height mismatch in coinbase", __func__),
                              REJECT_INVALID, "bad-cb-height");
+        }
+    }
+
+    // Tcoin: on networks with authorized block signers, only blocks signed by
+    // one of them are valid (see blocksign.h).
+    if (nHeight > 0 && !chainparams.BlockSignerPubKeys().empty()) {
+        std::string strError;
+        if (!CheckBlockSignature(block, chainparams.BlockSignerPubKeys(), strError)) {
+            return state.DoS(100, error("%s: %s", __func__, strError),
+                             REJECT_INVALID, "bad-block-signature");
         }
     }
 

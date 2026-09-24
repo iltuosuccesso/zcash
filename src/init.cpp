@@ -11,6 +11,7 @@
 #include "init.h"
 #include "addrman.h"
 #include "amount.h"
+#include "blocksign.h"
 #include "checkpoints.h"
 #include "compat.h"
 #include "consensus/upgrades.h"
@@ -34,6 +35,7 @@
 #include "rpc/register.h"
 #include "script/standard.h"
 #include "script/sigcache.h"
+#include "support/cleanse.h"
 #include "scheduler.h"
 #include "txdb.h"
 #include "torcontrol.h"
@@ -48,6 +50,7 @@
 #include "warnings.h"
 #include "zip317.h"
 #include <chrono>
+#include <fstream>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -498,6 +501,7 @@ std::string HelpMessage(HelpMessageMode mode)
     strUsage += HelpMessageOpt("-genproclimit=<n>", strprintf(_("Set the number of threads for coin generation if enabled (-1 = all cores, default: %d)"), DEFAULT_GENERATE_THREADS));
     strUsage += HelpMessageOpt("-equihashsolver=<name>", _("Specify the Equihash solver to be used if enabled (default: \"default\")"));
     strUsage += HelpMessageOpt("-mineraddress=<addr>", _("Send mined coins to a specific single address"));
+    strUsage += HelpMessageOpt("-blocksignkeyfile=<file>", _("Sign block templates with the private key (WIF) in <file>; the key must be an authorized block signer of the network. Relative paths are resolved against the data directory"));
     strUsage += HelpMessageOpt("-minetolocalwallet", strprintf(
             _("Require that mined blocks use a coinbase address in the local wallet (default: %u)"),
  #ifdef ENABLE_WALLET
@@ -1075,6 +1079,15 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
             "Run the TcoinGenesis gtest and fill in chainparams.cpp.",
             chainparams.NetworkIDString()));
     }
+    // Tcoin: mining is reserved to the pool's block signers. A network
+    // without them would accept blocks from anyone, so it must not start.
+    if (chainparams.NetworkIDString() != CBaseChainParams::REGTEST &&
+        chainparams.BlockSignerPubKeys().empty()) {
+        return InitError(strprintf(
+            "No block signers are configured for the '%s' network. "
+            "Add the pool's public keys to chainparams.cpp.",
+            chainparams.NetworkIDString()));
+    }
 
     // also see: InitParameterInteraction()
 
@@ -1481,6 +1494,38 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // Sanity check
     if (!InitSanityCheck())
         return InitError(_("Initialization sanity check failed. Zcash is shutting down."));
+
+    // Tcoin: load the block signing key of a node that produces blocks. The
+    // key is read from a separate file (mode 600) so that it never appears on
+    // the command line, in zcash.conf or in the process list.
+    if (mapArgs.count("-blocksignkeyfile")) {
+        if (chainparams.BlockSignerPubKeys().empty()) {
+            return InitError(strprintf(
+                "-blocksignkeyfile was given, but the '%s' network does not use block signatures.",
+                chainparams.NetworkIDString()));
+        }
+        fs::path keyPath = fs::absolute(fs::path(mapArgs["-blocksignkeyfile"]), GetDataDir());
+        std::ifstream keyFile(keyPath.string());
+        std::string strKey;
+        if (!keyFile || !(keyFile >> strKey)) {
+            return InitError(strprintf("Cannot read the block signing key from %s", keyPath.string()));
+        }
+        KeyIO keyIO(chainparams);
+        CKey key = keyIO.DecodeSecret(strKey);
+        memory_cleanse(strKey.data(), strKey.size());
+        if (!key.IsValid() || !key.IsCompressed()) {
+            return InitError(strprintf(
+                "%s does not contain a valid compressed private key in WIF format", keyPath.string()));
+        }
+        const auto& signers = chainparams.BlockSignerPubKeys();
+        if (std::find(signers.begin(), signers.end(), key.GetPubKey()) == signers.end()) {
+            return InitError(strprintf(
+                "The key in %s is not an authorized block signer on the '%s' network",
+                keyPath.string(), chainparams.NetworkIDString()));
+        }
+        g_blockSigningKey = key;
+        LogPrintf("Block signing key loaded, public key %s\n", HexStr(key.GetPubKey()));
+    }
 
     std::string strDataDir = GetDataDir().string();
 

@@ -11,6 +11,7 @@
 #include "consensus/params.h"
 #include "primitives/block.h"
 #include "protocol.h"
+#include "pubkey.h"
 
 #include <vector>
 
@@ -110,6 +111,11 @@ public:
     bool RequireWalletBackup() const { return fRequireWalletBackup; }
 
     const CBlock& GenesisBlock() const { return genesis; }
+    /**
+     * Tcoin: the compressed public keys allowed to sign blocks (see
+     * blocksign.h). When the list is empty, blocks need no signature.
+     */
+    const std::vector<CPubKey>& BlockSignerPubKeys() const { return vBlockSignerPubKeys; }
     /** Make miner wait to have peers to avoid wasting work */
     bool MiningRequiresPeers() const { return fMiningRequiresPeers; }
     /** Default value for -checkmempool and -checkblockindex argument */
@@ -167,6 +173,7 @@ protected:
     bool fTestnetToBeDeprecatedFieldRPC = false;
     CCheckpointData checkpointData;
     std::vector<std::string> vFoundersRewardAddress;
+    std::vector<CPubKey> vBlockSignerPubKeys;
 
     CAmount nSproutValuePoolCheckpointHeight = 0;
     CAmount nSproutValuePoolCheckpointBalance = 0;
