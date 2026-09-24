@@ -384,26 +384,9 @@ namespace Consensus {
             return nSubsidy;
         }
 
-        assert(nHeight >= this->SubsidySlowStartShift());
-
-        int halvings = this->Halving(nHeight);
-
-        // Force block reward to zero when right shift is undefined.
-        if (halvings >= 64)
-            return 0;
-
-        // zip208
-        // BlockSubsidy(height) :=
-        // SlowStartRate · height, if height < SlowStartInterval / 2
-        // SlowStartRate · (height + 1), if SlowStartInterval / 2 ≤ height and height < SlowStartInterval
-        // floor(MaxBlockSubsidy / 2^Halving(height)), if SlowStartInterval ≤ height and not IsBlossomActivated(height)
-        // floor(MaxBlockSubsidy / (BlossomPoWTargetSpacingRatio · 2^Halving(height))), otherwise
-        if (this->NetworkUpgradeActive(nHeight, Consensus::UPGRADE_BLOSSOM)) {
-            return (nSubsidy / Consensus::BLOSSOM_POW_TARGET_SPACING_RATIO) >> halvings;
-        } else {
-            // Subsidy is cut in half every 840,000 blocks which will occur approximately every 4 years.
-            return nSubsidy >> halvings;
-        }
+        // Tcoin: fixed reward, no halving
+        // After max supply, permanent small reward 0.1 TLC
+        return nSubsidy;
     }
 
     std::vector<std::pair<FSInfo, FundingStream>> Params::GetActiveFundingStreams(int nHeight) const
