@@ -747,6 +747,15 @@ template bool Equihash<200,9>::OptimisedSolve(const eh_HashState& base_state,
                                               const std::function<bool(std::vector<unsigned char>)> validBlock,
                                               const std::function<bool(EhSolverCancelCheck)> cancelled);
 
+// Explicit instantiations for Equihash<144,5> (Tcoin mainnet and testnet)
+template eh_HashState Equihash<144,5>::InitialiseState();
+template bool Equihash<144,5>::BasicSolve(const eh_HashState& base_state,
+                                          const std::function<bool(std::vector<unsigned char>)> validBlock,
+                                          const std::function<bool(EhSolverCancelCheck)> cancelled);
+template bool Equihash<144,5>::OptimisedSolve(const eh_HashState& base_state,
+                                              const std::function<bool(std::vector<unsigned char>)> validBlock,
+                                              const std::function<bool(EhSolverCancelCheck)> cancelled);
+
 // Explicit instantiations for Equihash<96,5>
 template eh_HashState Equihash<96,5>::InitialiseState();
 template bool Equihash<96,5>::BasicSolve(const eh_HashState& base_state,

@@ -117,7 +117,11 @@ public:
         consensus.nMajorityEnforceBlockUpgrade = 750;
         consensus.nMajorityRejectBlockOutdated = 950;
         consensus.nMajorityWindow = 4000;
-        const size_t N = 200, K = 9;
+        // Tcoin: Equihash 144,5 instead of Zcash's 200,9. Zcash ASICs only
+        // solve 200,9, so they cannot mine Tcoin; 144,5 is solved by common
+        // GPU miners (as used by Bitcoin Gold). Mining is still reserved to
+        // the pool by block signatures (blocksign.h).
+        const size_t N = 144, K = 5;
         static_assert(equihash_parameters_acceptable(N, K));
         consensus.nEquihashN = N;
         consensus.nEquihashK = K;
@@ -292,7 +296,11 @@ public:
         consensus.nMajorityEnforceBlockUpgrade = 51;
         consensus.nMajorityRejectBlockOutdated = 75;
         consensus.nMajorityWindow = 400;
-        const size_t N = 200, K = 9;
+        // Tcoin: Equihash 144,5 instead of Zcash's 200,9. Zcash ASICs only
+        // solve 200,9, so they cannot mine Tcoin; 144,5 is solved by common
+        // GPU miners (as used by Bitcoin Gold). Mining is still reserved to
+        // the pool by block signatures (blocksign.h).
+        const size_t N = 144, K = 5;
         static_assert(equihash_parameters_acceptable(N, K));
         consensus.nEquihashN = N;
         consensus.nEquihashK = K;
