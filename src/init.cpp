@@ -1066,6 +1066,16 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // ********************************************************* Step 2: parameter interactions
     const CChainParams& chainparams = Params();
 
+    // Tcoin: a network whose genesis block has not been mined yet has no
+    // Equihash solution in chainparams.cpp. Stop here with a clear message
+    // instead of failing later on an invalid genesis block.
+    if (chainparams.GenesisBlock().nSolution.empty()) {
+        return InitError(strprintf(
+            "The genesis block for the '%s' network has not been generated yet. "
+            "Run the TcoinGenesis gtest and fill in chainparams.cpp.",
+            chainparams.NetworkIDString()));
+    }
+
     // also see: InitParameterInteraction()
 
     // Set this early so that experimental features are correctly enabled/disabled

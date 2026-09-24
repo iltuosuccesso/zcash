@@ -62,10 +62,17 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
  *     CTxIn(COutPoint(000000, -1), coinbase 04ffff071f0104455a6361736830623963346565663862376363343137656535303031653335303039383462366665613335363833613763616331343161303433633432303634383335643334)
  *     CTxOut(nValue=0.00000000, scriptPubKey=0x5F1DF16B2B704C8A578D0B)
  *   vMerkleTree: c4eaa5
+ *
+ * Tcoin: mainnet and testnet use their own timestamp text, so their genesis
+ * blocks differ from every Zcash network. Regtest keeps the Zcash text and
+ * genesis block, which the existing test suites depend on and which never
+ * leaves the local machine.
  */
-static CBlock CreateGenesisBlock(uint32_t nTime, const uint256& nNonce, const std::vector<unsigned char>& nSolution, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
+static const char* TCOIN_GENESIS_TIMESTAMP = "Tcoin - The future of decentralized mining - 2026-09-24";
+static const char* ZCASH_GENESIS_TIMESTAMP = "Zcash0b9c4eef8b7cc417ee5001e3500984b6fea35683a7cac141a043c42064835d34";
+
+static CBlock CreateGenesisBlock(const char* pszTimestamp, uint32_t nTime, const uint256& nNonce, const std::vector<unsigned char>& nSolution, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
-    const char* pszTimestamp = "Tcoin - The future of decentralized mining - 2026-09-24";
     const CScript genesisOutputScript = CScript() << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f") << OP_CHECKSIG;
     return CreateGenesisBlock(pszTimestamp, genesisOutputScript, nTime, nNonce, nSolution, nBits, nVersion, genesisReward);
 }
@@ -88,7 +95,10 @@ public:
     CMainParams() {
         keyConstants.strNetworkID = "main";
         strCurrencyUnits = "TLC";
-        keyConstants.bip44CoinType = 133; // As registered in https://github.com/satoshilabs/slips/blob/master/slip-0044.md;
+        // Tcoin: HD wallet coin type (BIP 44). 133 belongs to Zcash; 8455 is
+        // not registered in SLIP-0044 as of 2026-09-24. It must be final before
+        // launch: changing it later changes every address derived from a seed.
+        keyConstants.bip44CoinType = 8455;
         // Tcoin: the pool pays its customers with ordinary transparent
         // transactions, so mined coins must not be forced into a shielded pool.
         consensus.fCoinbaseMustBeShielded = false;
@@ -147,10 +157,12 @@ public:
 
         consensus.nFundingPeriodLength = consensus.nPostBlossomSubsidyHalvingInterval / 48;
 
-        // guarantees the first 2 characters, when base58 encoded, are "t1"
-        keyConstants.base58Prefixes[PUBKEY_ADDRESS]     = {0x1C,0xB8};
-        // guarantees the first 2 characters, when base58 encoded, are "t3"
-        keyConstants.base58Prefixes[SCRIPT_ADDRESS]     = {0x1C,0xBD};
+        // Tcoin: transparent addresses have their own prefixes, so a Zcash
+        // address is rejected instead of being accepted as a Tcoin one.
+        // guarantees the first 2 characters, when base58 encoded, are "TL"
+        keyConstants.base58Prefixes[PUBKEY_ADDRESS]     = {0x0E,0xD3};
+        // guarantees the first 2 characters, when base58 encoded, are "TS"
+        keyConstants.base58Prefixes[SCRIPT_ADDRESS]     = {0x0E,0xE2};
         // the first character, when base58 encoded, is "5" or "K" or "L" (as in Bitcoin)
         keyConstants.base58Prefixes[SECRET_KEY]         = {0x80};
         // do not rely on these BIP32 prefixes; they are not specified and may change
@@ -163,47 +175,50 @@ public:
         // guarantees the first 2 characters, when base58 encoded, are "SK"
         keyConstants.base58Prefixes[ZCSPENDING_KEY]     = {0xAB,0x36};
 
-        keyConstants.bech32HRPs[SAPLING_PAYMENT_ADDRESS]      = "zs";
-        keyConstants.bech32HRPs[SAPLING_FULL_VIEWING_KEY]     = "zviews";
-        keyConstants.bech32HRPs[SAPLING_INCOMING_VIEWING_KEY] = "zivks";
-        keyConstants.bech32HRPs[SAPLING_EXTENDED_SPEND_KEY]   = "secret-extended-key-main";
-        keyConstants.bech32HRPs[SAPLING_EXTENDED_FVK]         = "zxviews";
+        // Tcoin: Sapling and TEX addresses have their own prefixes too.
+        // Unified addresses still use the Zcash "u" prefix: it is defined in
+        // the zcash_address Rust crate, not here.
+        keyConstants.bech32HRPs[SAPLING_PAYMENT_ADDRESS]      = "tlcs";
+        keyConstants.bech32HRPs[SAPLING_FULL_VIEWING_KEY]     = "tlcviews";
+        keyConstants.bech32HRPs[SAPLING_INCOMING_VIEWING_KEY] = "tlcivks";
+        keyConstants.bech32HRPs[SAPLING_EXTENDED_SPEND_KEY]   = "secret-extended-key-tlc";
+        keyConstants.bech32HRPs[SAPLING_EXTENDED_FVK]         = "tlcxviews";
 
-        keyConstants.bech32mHRPs[TEX_ADDRESS]                 = "tex";
+        keyConstants.bech32mHRPs[TEX_ADDRESS]                 = "tlctex";
         // Tcoin: no funding streams, lockbox streams or lockbox disbursements.
         // The Zcash ones pay the Zcash development fund; the whole block
         // subsidy goes to the block producer.
 
-        // The best chain should have at least this much work.
-        // From block 3308324, 2026-04-15.
-        consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000018bd77669ac52c2f");
+        // Tcoin: a new chain starts with no minimum amount of work.
+        consensus.nMinimumChainWork = uint256S("0x00");
 
-        /**
-         * The message start string should be awesome! ⓩ❤
-         */
-        pchMessageStart[0] = 0x24;
-        pchMessageStart[1] = 0xe9;
-        pchMessageStart[2] = 0x27;
-        pchMessageStart[3] = 0x64;
+        // Tcoin: network magic, chosen at random on 2026-09-24. It differs from
+        // every Zcash network, so Tcoin and Zcash nodes drop each other's
+        // messages instead of trying to sync.
+        pchMessageStart[0] = 0xd1;
+        pchMessageStart[1] = 0xcc;
+        pchMessageStart[2] = 0x44;
+        pchMessageStart[3] = 0xed;
         nDefaultPort = 8455;
         nPruneAfterHeight = 100000;
 
+        // Tcoin: the genesis block has not been mined yet. Its Equihash
+        // solution is produced by the TcoinGenesis gtest (see
+        // src/gtest/test_tcoin_genesis.cpp) and pasted here together with
+        // nTime, nNonce and the resulting hashes; until then the solution is
+        // empty and init refuses to start a node on this network.
         genesis = CreateGenesisBlock(
-            1477641360,
-            uint256S("0x0000000000000000000000000000000000000000000000000000000000001257"),
-            ParseHex("000a889f00854b8665cd555f4656f68179d31ccadc1b1f7fb0952726313b16941da348284d67add4686121d4e3d930160c1348d8191c25f12b267a6a9c131b5031cbf8af1f79c9d513076a216ec87ed045fa966e01214ed83ca02dc1797270a454720d3206ac7d931a0a680c5c5e099057592570ca9bdf6058343958b31901fce1a15a4f38fd347750912e14004c73dfe588b903b6c03166582eeaf30529b14072a7b3079e3a684601b9b3024054201f7440b0ee9eb1a7120ff43f713735494aa27b1f8bab60d7f398bca14f6abb2adbf29b04099121438a7974b078a11635b594e9170f1086140b4173822dd697894483e1c6b4e8b8dcd5cb12ca4903bc61e108871d4d915a9093c18ac9b02b6716ce1013ca2c1174e319c1a570215bc9ab5f7564765f7be20524dc3fdf8aa356fd94d445e05ab165ad8bb4a0db096c097618c81098f91443c719416d39837af6de85015dca0de89462b1d8386758b2cf8a99e00953b308032ae44c35e05eb71842922eb69797f68813b59caf266cb6c213569ae3280505421a7e3a0a37fdf8e2ea354fc5422816655394a9454bac542a9298f176e211020d63dee6852c40de02267e2fc9d5e1ff2ad9309506f02a1a71a0501b16d0d36f70cdfd8de78116c0c506ee0b8ddfdeb561acadf31746b5a9dd32c21930884397fb1682164cb565cc14e089d66635a32618f7eb05fe05082b8a3fae620571660a6b89886eac53dec109d7cbb6930ca698a168f301a950be152da1be2b9e07516995e20baceebecb5579d7cdbc16d09f3a50cb3c7dffe33f26686d4ff3f8946ee6475e98cf7b3cf9062b6966e838f865ff3de5fb064a37a21da7bb8dfd2501a29e184f207caaba364f36f2329a77515dcb710e29ffbf73e2bbd773fab1f9a6b005567affff605c132e4e4dd69f36bd201005458cfbd2c658701eb2a700251cefd886b1e674ae816d3f719bac64be649c172ba27a4fd55947d95d53ba4cbc73de97b8af5ed4840b659370c556e7376457f51e5ebb66018849923db82c1c9a819f173cccdb8f3324b239609a300018d0fb094adf5bd7cbb3834c69e6d0b3798065c525b20f040e965e1a161af78ff7561cd874f5f1b75aa0bc77f720589e1b810f831eac5073e6dd46d00a2793f70f7427f0f798f2f53a67e615e65d356e66fe40609a958a05edb4c175bcc383ea0530e67ddbe479a898943c6e3074c6fcc252d6014de3a3d292b03f0d88d312fe221be7be7e3c59d07fa0f2f4029e364f1f355c5d01fa53770d0cd76d82bf7e60f6903bc1beb772e6fde4a70be51d9c7e03c8d6d8dfb361a234ba47c470fe630820bbd920715621b9fbedb49fcee165ead0875e6c2b1af16f50b5d6140cc981122fcbcf7c5a4e3772b3661b628e08380abc545957e59f634705b1bbde2f0b4e055a5ec5676d859be77e20962b645e051a880fddb0180b4555789e1f9344a436a84dc5579e2553f1e5fb0a599c137be36cabbed0319831fea3fddf94ddc7971e4bcf02cdc93294a9aab3e3b13e3b058235b4f4ec06ba4ceaa49d675b4ba80716f3bc6976b1fbf9c8bf1f3e3a4dc1cd83ef9cf816667fb94f1e923ff63fef072e6a19321e4812f96cb0ffa864da50ad74deb76917a336f31dce03ed5f0303aad5e6a83634f9fcc371096f8288b8f02ddded5ff1bb9d49331e4a84dbe1543164438fde9ad71dab024779dcdde0b6602b5ae0a6265c14b94edd83b37403f4b78fcd2ed555b596402c28ee81d87a909c4e8722b30c71ecdd861b05f61f8b1231795c76adba2fdefa451b283a5d527955b9f3de1b9828e7b2e74123dd47062ddcc09b05e7fa13cb2212a6fdbc65d7e852cec463ec6fd929f5b8483cf3052113b13dac91b69f49d1b7d1aec01c4a68e41ce157"),
+            TCOIN_GENESIS_TIMESTAMP,
+            0,
+            uint256(),
+            {},
             0x1f07ffff, 4, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x00040fe8ec8471911baa1db1266ea15dd06b4a8a5c453883c000b031973dce08"));
-        assert(genesis.hashMerkleRoot == uint256S("0xc4eaa58879081de3c24a7b117ed2b28300e7ec4c4c1dff1d3f1268b7857a4ddb"));
 
+        // Tcoin: no DNS seeds yet. The seed node will be listed in
+        // chainparamsseeds.h (contrib/seeds) once it has a public address.
         vFixedSeeds.clear();
         vSeeds.clear();
-        vSeeds.push_back(CDNSSeedData("z.cash", "dnsseed.z.cash")); // Zcash
-        vSeeds.push_back(CDNSSeedData("str4d.xyz", "dnsseed.str4d.xyz")); // @str4d
-        vSeeds.push_back(CDNSSeedData("zfnd.org", "mainnet.seeder.zfnd.org")); // Zcash Foundation
-        vSeeds.push_back(CDNSSeedData("yolo.money", "mainnet.is.yolo.money")); // gtank
-
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_main, pnSeed6_main + ARRAYLEN(pnSeed6_main));
 
         fMiningRequiresPeers = true;
@@ -214,61 +229,16 @@ public:
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
-            (      0, consensus.hashGenesisBlock)
-            (   2500, uint256S("0x00000006dc968f600be11a86cbfbf7feb61c7577f45caced2e82b6d261d19744"))
-            (  15000, uint256S("0x00000000b6bc56656812a5b8dcad69d6ad4446dec23b5ec456c18641fb5381ba"))
-            (  67500, uint256S("0x000000006b366d2c1649a6ebb4787ac2b39c422f451880bc922e3a6fbd723616"))
-            ( 100000, uint256S("0x000000001c5c82cd6baccfc0879e3830fd50d5ede17fa2c37a9a253c610eb285"))
-            ( 133337, uint256S("0x0000000002776ccfaf06cc19857accf3e20c01965282f916b8a886e3e4a05be9"))
-            ( 180000, uint256S("0x000000001205b742eac4a1b3959635bdf8aeada078d6a996df89740f7b54351d"))
-            ( 222222, uint256S("0x000000000cafb9e56445a6cabc8057b57ee6fcc709e7adbfa195e5c7fac61343"))
-            ( 270000, uint256S("0x00000000025c1cfa0258e33ab050aaa9338a3d4aaa3eb41defefc887779a9729"))
-            ( 304600, uint256S("0x00000000028324e022a45014c4a4dc51e95d41e6bceb6ad554c5b65d5cea3ea5"))
-            ( 410100, uint256S("0x0000000002c565958f783a24a4ac17cde898ff525e75ed9baf66861b0b9fcada"))
-            ( 497000, uint256S("0x0000000000abd333f0acca6ffdf78a167699686d6a7d25c33fca5f295061ffff"))
-            ( 525000, uint256S("0x0000000001a36c500378be8862d9bf1bea8f1616da6e155971b608139cc7e39b"))
-            ( 650000, uint256S("0x0000000000a0a3fbbd739fb4fcbbfefff44efffc2064ca69a59d5284a2da26e2"))
-            ( 800000, uint256S("0x00000000013f1f4e5634e896ebdbe63dec115547c1480de0d83c64426f913c27"))
-            (1000000, uint256S("0x000000000062eff9ae053020017bfef24e521a2704c5ec9ead2a4608ac70fc7a"))
-            (1200000, uint256S("0x0000000000347d5011108fdcf667c93e622e8635c94e586556898e41db18d192"))
-            (1400000, uint256S("0x0000000001155ecec0ad3924d47ad476c0a5ed7527b8776f53cbda1a780b9f76"))
-            (1600000, uint256S("0x0000000000aae69fb228f90e77f34c24b7920667eaca726c3a3939536f03dcfc"))
-            (1860000, uint256S("0x000000000043a968c78af5fb8133e00e6fe340051c19dd969e53ab62bf3dc22a"))
-            (2000000, uint256S("0x00000000010accaf2f87934765dc2e0bf4823a2b1ae2c1395b334acfce52ad68"))
-            (2200000, uint256S("0x0000000001a0139c4c4d0e8f68cc562227c6003f4b1b640a3d921aeb8c3d2e3d"))
-            (2400000, uint256S("0x0000000000294d1c8d87a1b6566d302aa983691bc3cab0583a245389bbb9d285"))
-            (2600000, uint256S("0x0000000000b5ad92fcec0069d590f674d05ec7d96b1ff727863ea390950c4e49"))
-            (2800000, uint256S("0x00000000011a226fb25d778d65b055605a82da016989b7788e0ce83c4f8d64f7"))
-            (3000000, uint256S("0x0000000000573729e4db33678233e5dc0cc721c9c09977c64dcaa3f6344de8e9")),
-            1752983473,     // * UNIX timestamp of last checkpoint block
-            15537904,       // * total number of transactions between genesis and last checkpoint
-            5967            // * estimated number of transactions per day after checkpoint
-                            //   (total number of tx * 48 * 24) / checkpoint block height
+            (0, consensus.hashGenesisBlock),
+            0,  // * UNIX timestamp of last checkpoint block
+            0,  // * total number of transactions between genesis and last checkpoint
+            0   // * estimated number of transactions per day after checkpoint
         };
 
-        // Hardcoded fallback value for the Sprout shielded value pool balance
-        // for nodes that have not reindexed since the introduction of monitoring
-        // in #2795.
-        nSproutValuePoolCheckpointHeight = 520633;
-        nSproutValuePoolCheckpointBalance = 22145062442933;
+        // Tcoin: no Sprout value pool or chain supply checkpoints. They exist
+        // to bootstrap Zcash nodes with legacy block index data, which a new
+        // chain cannot have.
         fZIP209Enabled = true;
-        hashSproutValuePoolCheckpointBlock = uint256S("0000000000c7b46b6bc04b4cbf87d8bb08722aebd51232619b214f7273f8460e");
-
-        // Chain supply checkpoint at NU6.1 activation (height 3146400).
-        // This allows nodes with legacy block index data (written by zcashd
-        // versions older than 5.4.0, which did not serialize nChainSupplyDelta)
-        // to bootstrap nChainTotalSupply and nChainTransparentValue without
-        // requiring a reindex. The other pool balances are included so that
-        // we do not need to trust that the computed values from before the
-        // checkpoint are correct.
-        nChainSupplyCheckpointHeight = 3146400;
-        nChainSupplyCheckpointTotalSupply = 1640588297804480;
-        nChainSupplyCheckpointTransparentValue = 1158133657237751;
-        nChainSupplyCheckpointSproutValue = 2562695744028;
-        nChainSupplyCheckpointSaplingValue = 64691367655556;
-        nChainSupplyCheckpointOrchardValue = 415200558417145;
-        nChainSupplyCheckpointLockboxValue = 18750000;
-        hashChainSupplyCheckpointBlock = uint256S("0000000000b98a7d8f390793fa113bf6755935f0c14ea817af07d2c16f2c3ef4");
 
         // Tcoin: no Founders' Reward. Canopy is active from block 1, which
         // switches the Founders' Reward rule off, and the list stays empty so
@@ -287,7 +257,7 @@ class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
         keyConstants.strNetworkID = "test";
-        strCurrencyUnits = "TAZ";
+        strCurrencyUnits = "TLCT";
         keyConstants.bip44CoinType = 1;
         // Tcoin: the pool pays its customers with ordinary transparent
         // transactions, so mined coins must not be forced into a shielded pool.
@@ -310,7 +280,8 @@ public:
         consensus.nPowMaxAdjustUp = 16; // 16% adjustment up
         consensus.nPreBlossomPowTargetSpacing = Consensus::PRE_BLOSSOM_POW_TARGET_SPACING;
         consensus.nPostBlossomPowTargetSpacing = Consensus::POST_BLOSSOM_POW_TARGET_SPACING;
-        consensus.nPowAllowMinDifficultyBlocksAfterHeight = 299187;
+        // Tcoin: minimum-difficulty blocks are allowed from the start on testnet.
+        consensus.nPowAllowMinDifficultyBlocksAfterHeight = 0;
         consensus.fPowNoRetargeting = false;
         consensus.vUpgrades[Consensus::BASE_SPROUT].nProtocolVersion = 170002;
         consensus.vUpgrades[Consensus::BASE_SPROUT].nActivationHeight =
@@ -343,10 +314,10 @@ public:
 
         consensus.nFundingPeriodLength = consensus.nPostBlossomSubsidyHalvingInterval / 48;
 
-        // guarantees the first 2 characters, when base58 encoded, are "tm"
-        keyConstants.base58Prefixes[PUBKEY_ADDRESS]     = {0x1D,0x25};
-        // guarantees the first 2 characters, when base58 encoded, are "t2"
-        keyConstants.base58Prefixes[SCRIPT_ADDRESS]     = {0x1C,0xBA};
+        // guarantees the first 2 characters, when base58 encoded, are "tL"
+        keyConstants.base58Prefixes[PUBKEY_ADDRESS]     = {0x1C,0xE7};
+        // guarantees the first 2 characters, when base58 encoded, are "tS"
+        keyConstants.base58Prefixes[SCRIPT_ADDRESS]     = {0x1C,0xF6};
         // the first character, when base58 encoded, is "9" or "c" (as in Bitcoin)
         keyConstants.base58Prefixes[SECRET_KEY]         = {0xEF};
         // do not rely on these BIP32 prefixes; they are not specified and may change
@@ -359,13 +330,13 @@ public:
         // guarantees the first 2 characters, when base58 encoded, are "ST"
         keyConstants.base58Prefixes[ZCSPENDING_KEY]     = {0xAC,0x08};
 
-        keyConstants.bech32HRPs[SAPLING_PAYMENT_ADDRESS]      = "ztestsapling";
-        keyConstants.bech32HRPs[SAPLING_FULL_VIEWING_KEY]     = "zviewtestsapling";
-        keyConstants.bech32HRPs[SAPLING_INCOMING_VIEWING_KEY] = "zivktestsapling";
-        keyConstants.bech32HRPs[SAPLING_EXTENDED_SPEND_KEY]   = "secret-extended-key-test";
-        keyConstants.bech32HRPs[SAPLING_EXTENDED_FVK]         = "zxviewtestsapling";
+        keyConstants.bech32HRPs[SAPLING_PAYMENT_ADDRESS]      = "tlcstest";
+        keyConstants.bech32HRPs[SAPLING_FULL_VIEWING_KEY]     = "tlcviewtest";
+        keyConstants.bech32HRPs[SAPLING_INCOMING_VIEWING_KEY] = "tlcivktest";
+        keyConstants.bech32HRPs[SAPLING_EXTENDED_SPEND_KEY]   = "secret-extended-key-tlctest";
+        keyConstants.bech32HRPs[SAPLING_EXTENDED_FVK]         = "tlcxviewtest";
 
-        keyConstants.bech32mHRPs[TEX_ADDRESS]                 = "textest";
+        keyConstants.bech32mHRPs[TEX_ADDRESS]                 = "tlctextest";
 
         // Tcoin: no funding streams, lockbox streams or lockbox disbursements.
         // The Zcash ones pay the Zcash development fund; the whole block
@@ -388,31 +359,36 @@ public:
                       "MAX_FUTURE_BLOCK_TIME_MTP is too low given block target spacing");
         consensus.nFutureTimestampSoftForkHeight = consensus.vUpgrades[Consensus::UPGRADE_BLOSSOM].nActivationHeight + 6;
 
-        // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("000000000000000000000000000000000000000000000000000000263c0984a2");
+        // Tcoin: a new chain starts with no minimum amount of work.
+        consensus.nMinimumChainWork = uint256S("0x00");
 
-        pchMessageStart[0] = 0xfa;
-        pchMessageStart[1] = 0x1a;
-        pchMessageStart[2] = 0xf9;
-        pchMessageStart[3] = 0xbf;
+        // Tcoin: network magic, chosen at random on 2026-09-24. It differs from
+        // every Zcash network, so Tcoin and Zcash nodes drop each other's
+        // messages instead of trying to sync.
+        pchMessageStart[0] = 0x66;
+        pchMessageStart[1] = 0x36;
+        pchMessageStart[2] = 0xfa;
+        pchMessageStart[3] = 0xb2;
         nDefaultPort = 18455;
         nPruneAfterHeight = 1000;
 
+        // Tcoin: the genesis block has not been mined yet. Its Equihash
+        // solution is produced by the TcoinGenesis gtest (see
+        // src/gtest/test_tcoin_genesis.cpp) and pasted here together with
+        // nTime, nNonce and the resulting hashes; until then the solution is
+        // empty and init refuses to start a node on this network.
         genesis = CreateGenesisBlock(
-            1477648033,
-            uint256S("0x0000000000000000000000000000000000000000000000000000000000000006"),
-            ParseHex("00a6a51259c3f6732481e2d035197218b7a69504461d04335503cd69759b2d02bd2b53a9653f42cb33c608511c953673fa9da76170958115fe92157ad3bb5720d927f18e09459bf5c6072973e143e20f9bdf0584058c96b7c2234c7565f100d5eea083ba5d3dbaff9f0681799a113e7beff4a611d2b49590563109962baa149b628aae869af791f2f70bb041bd7ebfa658570917f6654a142b05e7ec0289a4f46470be7be5f693b90173eaaa6e84907170f32602204f1f4e1c04b1830116ffd0c54f0b1caa9a5698357bd8aa1f5ac8fc93b405265d824ba0e49f69dab5446653927298e6b7bdc61ee86ff31c07bde86331b4e500d42e4e50417e285502684b7966184505b885b42819a88469d1e9cf55072d7f3510f85580db689302eab377e4e11b14a91fdd0df7627efc048934f0aff8e7eb77eb17b3a95de13678004f2512293891d8baf8dde0ef69be520a58bbd6038ce899c9594cf3e30b8c3d9c7ecc832d4c19a6212747b50724e6f70f6451f78fd27b58ce43ca33b1641304a916186cfbe7dbca224f55d08530ba851e4df22baf7ab7078e9cbea46c0798b35a750f54103b0cdd08c81a6505c4932f6bfbd492a9fced31d54e98b6370d4c96600552fcf5b37780ed18c8787d03200963600db297a8f05dfa551321d17b9917edadcda51e274830749d133ad226f8bb6b94f13b4f77e67b35b71f52112ce9ba5da706ad9573584a2570a4ff25d29ab9761a06bdcf2c33638bf9baf2054825037881c14adf3816ba0cbd0fca689aad3ce16f2fe362c98f48134a9221765d939f0b49677d1c2447e56b46859f1810e2cf23e82a53e0d44f34dae932581b3b7f49eaec59af872cf9de757a964f7b33d143a36c270189508fcafe19398e4d2966948164d40556b05b7ff532f66f5d1edc41334ef742f78221dfe0c7ae2275bb3f24c89ae35f00afeea4e6ed187b866b209dc6e83b660593fce7c40e143beb07ac86c56f39e895385924667efe3a3f031938753c7764a2dbeb0a643fd359c46e614873fd0424e435fa7fac083b9a41a9d6bf7e284eee537ea7c50dd239f359941a43dc982745184bf3ee31a8dc850316aa9c6b66d6985acee814373be3458550659e1a06287c3b3b76a185c5cb93e38c1eebcf34ff072894b6430aed8d34122dafd925c46a515cca79b0269c92b301890ca6b0dc8b679cdac0f23318c105de73d7a46d16d2dad988d49c22e9963c117960bdc70ef0db6b091cf09445a516176b7f6d58ec29539166cc8a38bbff387acefffab2ea5faad0e8bb70625716ef0edf61940733c25993ea3de9f0be23d36e7cb8da10505f9dc426cd0e6e5b173ab4fff8c37e1f1fb56d1ea372013d075e0934c6919393cfc21395eea20718fad03542a4162a9ded66c814ad8320b2d7c2da3ecaf206da34c502db2096d1c46699a91dd1c432f019ad434e2c1ce507f91104f66f491fed37b225b8e0b2888c37276cfa0468fc13b8d593fd9a2675f0f5b20b8a15f8fa7558176a530d6865738ddb25d3426dab905221681cf9da0e0200eea5b2eba3ad3a5237d2a391f9074bf1779a2005cee43eec2b058511532635e0fea61664f531ac2b356f40db5c5d275a4cf5c82d468976455af4e3362cc8f71aa95e71d394aff3ead6f7101279f95bcd8a0fedce1d21cb3c9f6dd3b182fce0db5d6712981b651f29178a24119968b14783cafa713bc5f2a65205a42e4ce9dc7ba462bdb1f3e4553afc15f5f39998fdb53e7e231e3e520a46943734a007c2daa1eda9f495791657eefcac5c32833936e568d06187857ed04d7b97167ae207c5c5ae54e528c36016a984235e9c5b2f0718d7b3aa93c7822ccc772580b6599671b3c02ece8a21399abd33cfd3028790133167d0a97e7de53dc8ff"),
+            TCOIN_GENESIS_TIMESTAMP,
+            0,
+            uint256(),
+            {},
             0x2007ffff, 4, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
-        assert(consensus.hashGenesisBlock == uint256S("0x05a60a92d99d85997cce3b87616c089f6124d7342af37106edc76126334a2c38"));
-        assert(genesis.hashMerkleRoot == uint256S("0xc4eaa58879081de3c24a7b117ed2b28300e7ec4c4c1dff1d3f1268b7857a4ddb"));
 
+        // Tcoin: no DNS seeds yet. The seed node will be listed in
+        // chainparamsseeds.h (contrib/seeds) once it has a public address.
         vFixedSeeds.clear();
         vSeeds.clear();
-        vSeeds.push_back(CDNSSeedData("z.cash", "dnsseed.testnet.z.cash")); // Zcash
-        vSeeds.push_back(CDNSSeedData("zfnd.org", "testnet.seeder.zfnd.org")); // Zcash Foundation
-        vSeeds.push_back(CDNSSeedData("yolo.money", "testnet.is.yolo.money")); // gtank
-
         vFixedSeeds = std::vector<SeedSpec6>(pnSeed6_test, pnSeed6_test + ARRAYLEN(pnSeed6_test));
 
         fMiningRequiresPeers = true;
@@ -421,33 +397,18 @@ public:
         fMineBlocksOnDemand = false;
         fTestnetToBeDeprecatedFieldRPC = true;
 
-
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
-            (0, consensus.hashGenesisBlock)
-            (38000, uint256S("0x001e9a2d2e2892b88e9998cf7b079b41d59dd085423a921fe8386cecc42287b8")),
-            1486897419,  // * UNIX timestamp of last checkpoint block
-            47163,       // * total number of transactions between genesis and last checkpoint
-            715          //   total number of tx / (checkpoint block height / (24 * 24))
+            (0, consensus.hashGenesisBlock),
+            0,  // * UNIX timestamp of last checkpoint block
+            0,  // * total number of transactions between genesis and last checkpoint
+            0   // * estimated number of transactions per day after checkpoint
         };
 
-        // Hardcoded fallback value for the Sprout shielded value pool balance
-        // for nodes that have not reindexed since the introduction of monitoring
-        // in #2795.
-        nSproutValuePoolCheckpointHeight = 440329;
-        nSproutValuePoolCheckpointBalance = 40000029096803;
+        // Tcoin: no Sprout value pool or chain supply checkpoints. They exist
+        // to bootstrap Zcash nodes with legacy block index data, which a new
+        // chain cannot have.
         fZIP209Enabled = true;
-        hashSproutValuePoolCheckpointBlock = uint256S("000a95d08ba5dcbabe881fc6471d11807bcca7df5f1795c99f3ec4580db4279b");
-
-        // Chain supply checkpoint at NU6.1 activation (height 3536500).
-        nChainSupplyCheckpointHeight = 3536500;
-        nChainSupplyCheckpointTotalSupply = 1690647512835043;
-        nChainSupplyCheckpointTransparentValue = 1499728640946163;
-        nChainSupplyCheckpointSproutValue = 42832983037484;
-        nChainSupplyCheckpointSaplingValue = 140562922195481;
-        nChainSupplyCheckpointOrchardValue = 7522947905915;
-        nChainSupplyCheckpointLockboxValue = 18750000;
-        hashChainSupplyCheckpointBlock = uint256S("01b947c7556b23040dc6840e9d3e4c6d9478c67a87b9737a83be848729d6e0af");
 
         // Tcoin: no Founders' Reward. Canopy is active from block 1, which
         // switches the Founders' Reward rule off, and the list stays empty so
@@ -559,6 +520,7 @@ public:
         nPruneAfterHeight = 1000;
 
         genesis = CreateGenesisBlock(
+            ZCASH_GENESIS_TIMESTAMP,
             1296688602,
             uint256S("0x0000000000000000000000000000000000000000000000000000000000000009"),
             ParseHex("01936b7db1eb4ac39f151b8704642d0a8bda13ec547d54cd5e43ba142fc6d8877cab07b3"),
