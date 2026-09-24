@@ -104,6 +104,14 @@ public:
         consensus.fCoinbaseMustBeShielded = false;
         // Tcoin: no slow start, every block pays the full subsidy.
         consensus.nSubsidySlowStartInterval = 0;
+        // Tcoin emission: 10M TLC premine in block 1, then 12.5 TLC per block
+        // until 100M TLC have been issued (7,200,000 blocks, about 17 years at
+        // 75 seconds), then 0.1 TLC per block forever.
+        consensus.nPremineSubsidy = 10000000 * COIN;
+        consensus.nFixedBlockSubsidy = 125 * COIN / 10;
+        consensus.nLastFixedSubsidyHeight = 1 + 7200000;
+        consensus.nTailBlockSubsidy = COIN / 10;
+        static_assert(10000000 * COIN + 7200000 * (125 * COIN / 10) == 100000000 * COIN);
         consensus.nPreBlossomSubsidyHalvingInterval = Consensus::PRE_BLOSSOM_HALVING_INTERVAL;
         consensus.nPostBlossomSubsidyHalvingInterval = POST_BLOSSOM_HALVING_INTERVAL(Consensus::PRE_BLOSSOM_HALVING_INTERVAL);
         consensus.nMajorityEnforceBlockUpgrade = 750;
@@ -264,6 +272,14 @@ public:
         consensus.fCoinbaseMustBeShielded = false;
         // Tcoin: no slow start, every block pays the full subsidy.
         consensus.nSubsidySlowStartInterval = 0;
+        // Tcoin emission: 10M TLC premine in block 1, then 12.5 TLC per block
+        // until 100M TLC have been issued (7,200,000 blocks, about 17 years at
+        // 75 seconds), then 0.1 TLC per block forever.
+        consensus.nPremineSubsidy = 10000000 * COIN;
+        consensus.nFixedBlockSubsidy = 125 * COIN / 10;
+        consensus.nLastFixedSubsidyHeight = 1 + 7200000;
+        consensus.nTailBlockSubsidy = COIN / 10;
+        static_assert(10000000 * COIN + 7200000 * (125 * COIN / 10) == 100000000 * COIN);
         consensus.nPreBlossomSubsidyHalvingInterval = Consensus::PRE_BLOSSOM_HALVING_INTERVAL;
         consensus.nPostBlossomSubsidyHalvingInterval = POST_BLOSSOM_HALVING_INTERVAL(Consensus::PRE_BLOSSOM_HALVING_INTERVAL);
         consensus.nMajorityEnforceBlockUpgrade = 51;

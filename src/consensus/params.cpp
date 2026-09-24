@@ -369,24 +369,17 @@ namespace Consensus {
 
     CAmount Params::GetBlockSubsidy(int nHeight) const
     {
-        CAmount nSubsidy = 12.5 * COIN;
-
-        // Mining slow start
-        // The subsidy is ramped up linearly, skipping the middle payout of
-        // MAX_SUBSIDY/2 to keep the monetary curve consistent with no slow start.
-        if (nHeight < this->SubsidySlowStartShift()) {
-            nSubsidy /= this->nSubsidySlowStartInterval;
-            nSubsidy *= nHeight;
-            return nSubsidy;
-        } else if (nHeight < this->nSubsidySlowStartInterval) {
-            nSubsidy /= this->nSubsidySlowStartInterval;
-            nSubsidy *= (nHeight+1);
-            return nSubsidy;
+        // The genesis block's coinbase is never added to the UTXO set.
+        if (nHeight <= 0) {
+            return 0;
         }
-
-        // Tcoin: fixed reward, no halving
-        // After max supply, permanent small reward 0.1 TLC
-        return nSubsidy;
+        if (nHeight == 1 && nPremineSubsidy > 0) {
+            return nPremineSubsidy;
+        }
+        if (nHeight <= nLastFixedSubsidyHeight) {
+            return nFixedBlockSubsidy;
+        }
+        return nTailBlockSubsidy;
     }
 
     std::vector<std::pair<FSInfo, FundingStream>> Params::GetActiveFundingStreams(int nHeight) const

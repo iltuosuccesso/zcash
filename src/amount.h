@@ -29,7 +29,17 @@ extern const std::string MINOR_CURRENCY_UNIT;
  * critical; in unusual circumstances like a(nother) overflow bug that allowed
  * for the creation of coins out of thin air modification could lead to a fork.
  * */
-static const CAmount MAX_MONEY = 100000000 * COIN;
+/*
+ * Tcoin: total issuance reaches 100M TLC after the fixed-subsidy period and
+ * then grows by 0.1 TLC per block (see Consensus::Params::GetBlockSubsidy).
+ * The chain supply is itself checked against MAX_MONEY, so the bound must be
+ * above 100M or the chain would stop at the first tail-emission block. 200M
+ * leaves room for about 2,400 years of tail emission.
+ *
+ * The Rust libraries still cap a single shielded value or transaction amount
+ * at the Zcash limit of 21M coins.
+ */
+static const CAmount MAX_MONEY = 200000000 * COIN;
 inline bool MoneyRange(const CAmount& nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 inline bool MoneyDeltaRange(const CAmount& nValue) { return (nValue >= -MAX_MONEY && nValue <= MAX_MONEY); }
 

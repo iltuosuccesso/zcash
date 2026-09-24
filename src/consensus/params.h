@@ -14,6 +14,7 @@
 #include "key_constants.h"
 #include <zcash/address/sapling.hpp>
 
+#include <limits>
 #include <optional>
 #include <variant>
 
@@ -420,7 +421,26 @@ struct Params {
         const std::string& strAddress);
 
     /**
-     * Returns the total block subsidy as of the given block height
+     * Tcoin emission schedule, applied by GetBlockSubsidy:
+     *
+     * - block 1 pays nPremineSubsidy (if it is zero, block 1 is an ordinary block);
+     * - every following block up to nLastFixedSubsidyHeight pays nFixedBlockSubsidy;
+     * - every block after that pays nTailBlockSubsidy, forever.
+     *
+     * The defaults are the regtest values: no premine and no end to the fixed
+     * subsidy, so tests are not affected by the schedule.
+     */
+    CAmount nPremineSubsidy = 0;
+    CAmount nFixedBlockSubsidy = 125 * COIN / 10; // 12.5 coins
+    int nLastFixedSubsidyHeight = std::numeric_limits<int>::max();
+    CAmount nTailBlockSubsidy = 0;
+
+    /**
+     * Returns the total block subsidy for the block at the given height.
+     *
+     * @param nHeight  height of the block being mined or validated (>= 0)
+     * @return         the subsidy in zatoshi, following the Tcoin emission
+     *                 schedule above; 0 for the genesis block
      */
     CAmount GetBlockSubsidy(int nHeight) const;
 
