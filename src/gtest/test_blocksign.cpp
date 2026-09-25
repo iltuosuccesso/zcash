@@ -45,9 +45,7 @@ CBlock MakeBlock(const Consensus::Params& params, int nHeight, bool requireV4)
  */
 CKey MakeKey()
 {
-    CKey key;
-    key.MakeNewKey(true);
-    return key;
+    return CKey::TestOnlyRandomKey(true);
 }
 
 } // namespace
