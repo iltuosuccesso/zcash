@@ -19,11 +19,7 @@ static const size_t P2PKH_STANDARD_INPUT_SIZE = 150;
 static const size_t P2PKH_STANDARD_OUTPUT_SIZE = 34;
 
 // Constants for block template construction.
-// Tcoin: raised from 10^16 to 10^17 because it must stay above MAX_MONEY
-// (see CTxMemPoolEntry::GetWeightRatio), and Tcoin's MAX_MONEY is 2 * 10^16
-// zatoshi. Weight ratios are computed and compared as int128_t, so the larger
-// scale cannot overflow.
-static const int64_t WEIGHT_RATIO_SCALE = INT64_C(100000000000000000);
+static const int64_t WEIGHT_RATIO_SCALE = INT64_C(10000000000000000);
 static const int64_t WEIGHT_RATIO_CAP = 4;
 static const size_t DEFAULT_BLOCK_UNPAID_ACTION_LIMIT = 0;
 

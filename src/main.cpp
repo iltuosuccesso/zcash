@@ -3415,7 +3415,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                   "data that predates Sprout value pool tracking. Please "
                   "restart zcashd with -reindex."));
         }
-        if (!MoneyRange(pindex->nChainSproutValue.value())) {
+        if (!SupplyRange(pindex->nChainSproutValue.value())) {
             return state.DoS(100,
                 error("%s: turnstile violation in Sprout shielded value pool at height %d (sprout=%d, sapling=%d, orchard=%d, lockbox=%d)", __func__,
                       pindex->nHeight, pindex->nChainSproutValue.value(), sapling_supply, orchard_supply, lockbox_supply),
@@ -3423,7 +3423,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         // Sapling
-        if (!MoneyRange(sapling_supply)) {
+        if (!SupplyRange(sapling_supply)) {
             return state.DoS(100,
                 error("%s: turnstile violation in Sapling shielded value pool at height %d (sprout=%d, sapling=%d, orchard=%d, lockbox=%d)", __func__,
                       pindex->nHeight, pindex->nChainSproutValue.value(), sapling_supply, orchard_supply, lockbox_supply),
@@ -3431,7 +3431,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         }
 
         // Orchard
-        if (!MoneyRange(orchard_supply)) {
+        if (!SupplyRange(orchard_supply)) {
             return state.DoS(100,
                 error("%s: turnstile violation in Orchard shielded value pool at height %d (sprout=%d, sapling=%d, orchard=%d, lockbox=%d)", __func__,
                       pindex->nHeight, pindex->nChainSproutValue.value(), sapling_supply, orchard_supply, lockbox_supply),
@@ -3446,7 +3446,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     // so this check in practice is defending against a protocol specification
     // error in defining the one-time lockbox disbursement(s). It should not be
     // conditional on `chainparams.ZIP209Enabled()`.
-    if (!MoneyRange(lockbox_supply)) {
+    if (!SupplyRange(lockbox_supply)) {
         return state.DoS(100,
             error("%s: invalid lockbox disbursement amount at height %d (sprout=%s, sapling=%d, orchard=%d, lockbox=%d)", __func__,
                   pindex->nHeight,
@@ -3548,7 +3548,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     // Initialize the chain supply delta to the value delta of the lockbox for the block,
     // as previously computed using `SetChainPoolValues`.
     CAmount chainSupplyDelta = pindex->nLockboxValue;
-    if (!MoneyDeltaRange(chainSupplyDelta)) {
+    if (!SupplyDeltaRange(chainSupplyDelta)) {
         return state.DoS(100, error("%s: chain supply delta out of range: %d at height %d", __func__, chainSupplyDelta, pindex->nHeight),
             REJECT_INVALID, "bad-chain-supply-delta-out-of-range");
     }
@@ -3594,7 +3594,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                         REJECT_INVALID, "bad-txns-input-value-out-of-range");
                 }
                 transparentValueDelta -= prevout.nValue;
-                if (!MoneyDeltaRange(transparentValueDelta)) {
+                if (!SupplyDeltaRange(transparentValueDelta)) {
                     return state.DoS(100, error("%s: transparent value delta out of range: %d at height %d", __func__, transparentValueDelta, pindex->nHeight),
                         REJECT_INVALID, "bad-transparent-value-delta-out-of-range");
                 }
@@ -3674,7 +3674,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 return state.DoS(100, error("%s: coinbase output value out of range at height %d", __func__, pindex->nHeight),
                     REJECT_INVALID, "bad-cb-output-value-out-of-range");
             }
-            if (!MoneyDeltaRange(chainSupplyDelta)) {
+            if (!SupplyDeltaRange(chainSupplyDelta)) {
                 return state.DoS(100, error("%s: chain supply delta out of range: %d at height %d", __func__, chainSupplyDelta, pindex->nHeight),
                     REJECT_INVALID, "bad-chain-supply-delta-out-of-range");
             }
@@ -3700,7 +3700,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             // and therefore decrease the chain supply. If the miner claims them,
             // they will be re-added in the other branch of this conditional.
             chainSupplyDelta -= txFee;
-            if (!MoneyDeltaRange(chainSupplyDelta)) {
+            if (!SupplyDeltaRange(chainSupplyDelta)) {
                 return state.DoS(100, error("%s: chain supply delta out of range: %d at height %d", __func__, chainSupplyDelta, pindex->nHeight),
                     REJECT_INVALID, "bad-chain-supply-delta-out-of-range");
             }
@@ -3810,7 +3810,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
         for (const auto& out : tx.vout) {
             transparentValueDelta += out.nValue;
-            if (!MoneyDeltaRange(transparentValueDelta)) {
+            if (!SupplyDeltaRange(transparentValueDelta)) {
                 return state.DoS(100, error("%s: transparent value delta out of range: %d at height %d", __func__, transparentValueDelta, pindex->nHeight),
                     REJECT_INVALID, "bad-transparent-value-delta-out-of-range");
             }
@@ -3859,19 +3859,19 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (!fJustCheck) {
         // Update pindex with the net change in value and the chain's total value,
         // both for the supply and for the transparent pool.
-        assert(MoneyDeltaRange(chainSupplyDelta));
-        assert(MoneyDeltaRange(transparentValueDelta));
+        assert(SupplyDeltaRange(chainSupplyDelta));
+        assert(SupplyDeltaRange(transparentValueDelta));
         pindex->nChainSupplyDelta = chainSupplyDelta;
         pindex->nTransparentValue = transparentValueDelta;
         if (pindex->pprev) {
             if (pindex->pprev->nChainTotalSupply.has_value()) {
                 CAmount chainTotalSupply = pindex->pprev->nChainTotalSupply.value();
-                if (!MoneyRange(chainTotalSupply)) {
+                if (!SupplyRange(chainTotalSupply)) {
                     return state.DoS(100, error("%s: previous total supply out of range: %d at height %d", __func__, chainTotalSupply, pindex->nHeight),
                         REJECT_INVALID, "bad-chain-total-supply-out-of-range");
                 }
                 chainTotalSupply += chainSupplyDelta;
-                if (!MoneyRange(chainTotalSupply)) {
+                if (!SupplyRange(chainTotalSupply)) {
                     return state.DoS(100, error("%s: new total supply out of range: %d at height %d", __func__, chainTotalSupply, pindex->nHeight),
                         REJECT_INVALID, "bad-chain-total-supply-out-of-range");
                 }
@@ -3882,12 +3882,12 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
             if (pindex->pprev->nChainTransparentValue.has_value()) {
                 CAmount chainTransparentValue = pindex->pprev->nChainTransparentValue.value();
-                if (!MoneyRange(chainTransparentValue)) {
+                if (!SupplyRange(chainTransparentValue)) {
                     return state.DoS(100, error("%s: previous chain transparent value out of range: %d at height %d", __func__, chainTransparentValue, pindex->nHeight),
                         REJECT_INVALID, "bad-chain-transparent-value-out-of-range");
                 }
                 chainTransparentValue += transparentValueDelta;
-                if (!MoneyRange(chainTransparentValue)) {
+                if (!SupplyRange(chainTransparentValue)) {
                     return state.DoS(100, error("%s: new chain transparent value out of range: %d at height %d", __func__, chainTransparentValue, pindex->nHeight),
                         REJECT_INVALID, "bad-chain-transparent-value-out-of-range");
                 }
@@ -3905,10 +3905,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             // These conditions were checked in the turnstile section above.
             assert(pindex->nChainSproutValue.has_value());
             const CAmount sprout_supply = pindex->nChainSproutValue.value();
-            assert(MoneyRange(sprout_supply));
-            assert(MoneyRange(sapling_supply));
-            assert(MoneyRange(orchard_supply));
-            assert(MoneyRange(lockbox_supply));
+            assert(SupplyRange(sprout_supply));
+            assert(SupplyRange(sapling_supply));
+            assert(SupplyRange(orchard_supply));
+            assert(SupplyRange(lockbox_supply));
 
             // `nChainTotalSupply` and `nChainTransparentValue` may be unpopulated
             // if a parent block index entry was written by a zcashd version older
@@ -3920,20 +3920,20 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 const CAmount transparent_supply = pindex->nChainTransparentValue.value();
                 const CAmount total_supply       = pindex->nChainTotalSupply.value();
 
-                if (!MoneyRange(transparent_supply)) {
+                if (!SupplyRange(transparent_supply)) {
                     return state.DoS(100,
                         error("%s: turnstile violation in transparent value pool at height %d (sprout=%d, sapling=%d, orchard=%d, lockbox=%d, transparent=%d, total=%d)", __func__,
                               pindex->nHeight, sprout_supply, sapling_supply, orchard_supply, lockbox_supply, transparent_supply, total_supply),
                         REJECT_INVALID, "turnstile-violation-transparent");
                 }
-                if (!MoneyRange(total_supply)) {
+                if (!SupplyRange(total_supply)) {
                     return state.DoS(100,
                         error("%s: turnstile violation in total supply at height %d (sprout=%d, sapling=%d, orchard=%d, lockbox=%d, transparent=%d, total=%d)", __func__,
                               pindex->nHeight, sprout_supply, sapling_supply, orchard_supply, lockbox_supply, transparent_supply, total_supply),
                         REJECT_INVALID, "turnstile-violation-total");
                 }
 
-                static_assert(MAX_MONEY <= std::numeric_limits<CAmount>::max() / 5, "sum of five MoneyRange CAmounts must fit in CAmount");
+                static_assert(MAX_SUPPLY <= std::numeric_limits<CAmount>::max() / 5, "sum of five SupplyRange CAmounts must fit in CAmount");
                 const CAmount expected_total_supply = transparent_supply + sprout_supply + sapling_supply + orchard_supply + lockbox_supply;
                 if (expected_total_supply != total_supply) {
                     return AbortNode(
