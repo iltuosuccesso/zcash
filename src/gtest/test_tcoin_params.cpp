@@ -46,17 +46,17 @@ TEST(TcoinParams, EmissionSchedule)
         EXPECT_EQ(params.GetBlockSubsidy(1), 10000000 * COIN);
         EXPECT_EQ(params.GetBlockSubsidy(2), 125 * COIN / 10);
         EXPECT_EQ(params.GetBlockSubsidy(7200001), 125 * COIN / 10);
-        EXPECT_EQ(params.GetBlockSubsidy(7200002), COIN / 10);
-        EXPECT_EQ(params.GetBlockSubsidy(100000000), COIN / 10);
+        EXPECT_EQ(params.GetBlockSubsidy(7200002), 0);
+        EXPECT_EQ(params.GetBlockSubsidy(100000000), 0);
 
         // Premine plus the fixed-subsidy blocks issue exactly 100M coins.
         CAmount issued = params.GetBlockSubsidy(1) +
             CAmount(params.nLastFixedSubsidyHeight - 1) * params.nFixedBlockSubsidy;
         EXPECT_EQ(issued, 100000000 * COIN);
 
-        // Chain-wide totals must have room for the tail emission; single
-        // amounts keep the limit of the Rust libraries.
-        EXPECT_GT(MAX_SUPPLY, issued);
+        // The 100M cap is enforced by MAX_SUPPLY; single amounts keep the
+        // limit of the Rust libraries.
+        EXPECT_EQ(MAX_SUPPLY, issued);
         EXPECT_EQ(MAX_MONEY, 21000000 * COIN);
     }
 }

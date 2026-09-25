@@ -379,7 +379,7 @@ namespace Consensus {
         if (nHeight <= nLastFixedSubsidyHeight) {
             return nFixedBlockSubsidy;
         }
-        return nTailBlockSubsidy;
+        return 0;
     }
 
     std::vector<std::pair<FSInfo, FundingStream>> Params::GetActiveFundingStreams(int nHeight) const

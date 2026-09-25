@@ -425,7 +425,7 @@ struct Params {
      *
      * - block 1 pays nPremineSubsidy (if it is zero, block 1 is an ordinary block);
      * - every following block up to nLastFixedSubsidyHeight pays nFixedBlockSubsidy;
-     * - every block after that pays nTailBlockSubsidy, forever.
+     * - every block after that pays no subsidy: miners earn only fees.
      *
      * The defaults are the regtest values: no premine and no end to the fixed
      * subsidy, so tests are not affected by the schedule.
@@ -433,7 +433,6 @@ struct Params {
     CAmount nPremineSubsidy = 0;
     CAmount nFixedBlockSubsidy = 125 * COIN / 10; // 12.5 coins
     int nLastFixedSubsidyHeight = std::numeric_limits<int>::max();
-    CAmount nTailBlockSubsidy = 0;
 
     /**
      * Returns the total block subsidy for the block at the given height.

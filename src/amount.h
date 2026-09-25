@@ -41,13 +41,14 @@ inline bool MoneyRange(const CAmount& nValue) { return (nValue >= 0 && nValue <=
 inline bool MoneyDeltaRange(const CAmount& nValue) { return (nValue >= -MAX_MONEY && nValue <= MAX_MONEY); }
 
 /*
- * Tcoin: MAX_SUPPLY bounds chain-wide totals: the total supply, the value in
- * each pool and the per-block changes to them. Issuance reaches 100M TLC after
- * the fixed-subsidy period and then grows by 0.1 TLC per block (see
- * Consensus::Params::GetBlockSubsidy), so this bound must be well above
- * MAX_MONEY; 200M leaves room for about 2,400 years of tail emission.
+ * Tcoin: MAX_SUPPLY is the hard cap of 100M TLC. It bounds chain-wide totals:
+ * the total supply, the value in each pool and the per-block changes to them.
+ * Issuance reaches exactly this amount at the end of the fixed-subsidy period
+ * and never grows after it (see Consensus::Params::GetBlockSubsidy); because
+ * the total supply is checked against it in ConnectBlock, a block that would
+ * push the supply above 100M is invalid.
  */
-static const CAmount MAX_SUPPLY = 200000000 * COIN;
+static const CAmount MAX_SUPPLY = 100000000 * COIN;
 inline bool SupplyRange(const CAmount& nValue) { return (nValue >= 0 && nValue <= MAX_SUPPLY); }
 inline bool SupplyDeltaRange(const CAmount& nValue) { return (nValue >= -MAX_SUPPLY && nValue <= MAX_SUPPLY); }
 
