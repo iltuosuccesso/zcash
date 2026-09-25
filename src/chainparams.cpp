@@ -720,6 +720,9 @@ std::string CChainParams::GetFoundersRewardAddressAtHeight(int nHeight) const {
         nHeight = blossomActivationHeight + ((nHeight - blossomActivationHeight) / Consensus::BLOSSOM_POW_TARGET_SPACING_RATIO);
     }
     assert(nHeight > 0 && nHeight <= preBlossomMaxHeight);
+    // Tcoin mainnet and testnet have no Founders' Reward: Canopy is active from
+    // block 1, so consensus code never gets here on those networks.
+    assert(!vFoundersRewardAddress.empty() && "this network has no Founders' Reward addresses");
     size_t addressChangeInterval = (preBlossomMaxHeight + vFoundersRewardAddress.size()) / vFoundersRewardAddress.size();
     size_t i = nHeight / addressChangeInterval;
     return vFoundersRewardAddress[i];

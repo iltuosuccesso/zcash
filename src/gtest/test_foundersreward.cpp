@@ -114,31 +114,6 @@ int GetMaxFundingStreamHeight(const Consensus::Params& params) {
 }
 
 
-TEST(FoundersRewardTest, General) {
-    SelectParams(CBaseChainParams::TESTNET);
-
-    CChainParams params = Params();
-    
-    // Fourth testnet reward:
-    // address = t2ENg7hHVqqs9JwU5cgjvSbxnT2a9USNfhy
-    // script.ToString() = OP_HASH160 55d64928e69829d9376c776550b6cc710d427153 OP_EQUAL
-    // HexStr(script) = a91455d64928e69829d9376c776550b6cc710d42715387
-    EXPECT_EQ(HexStr(params.GetFoundersRewardScriptAtHeight(1)), "a914ef775f1f997f122a062fff1a2d7443abd1f9c64287");
-    EXPECT_EQ(params.GetFoundersRewardAddressAtHeight(1), "t2UNzUUx8mWBCRYPRezvA363EYXyEpHokyi");
-    EXPECT_EQ(HexStr(params.GetFoundersRewardScriptAtHeight(53126)), "a914ac67f4c072668138d88a86ff21b27207b283212f87");
-    EXPECT_EQ(params.GetFoundersRewardAddressAtHeight(53126), "t2NGQjYMQhFndDHguvUw4wZdNdsssA6K7x2");
-    EXPECT_EQ(HexStr(params.GetFoundersRewardScriptAtHeight(53127)), "a91455d64928e69829d9376c776550b6cc710d42715387");
-    EXPECT_EQ(params.GetFoundersRewardAddressAtHeight(53127), "t2ENg7hHVqqs9JwU5cgjvSbxnT2a9USNfhy");
-
-    int maxHeight = GetLastFoundersRewardHeight(params.GetConsensus());
-    
-    // If the block height parameter is out of bounds, there is an assert.
-    EXPECT_DEATH(params.GetFoundersRewardScriptAtHeight(0), "nHeight");
-    EXPECT_DEATH(params.GetFoundersRewardScriptAtHeight(maxHeight+1), "nHeight");
-    EXPECT_DEATH(params.GetFoundersRewardAddressAtHeight(0), "nHeight");
-    EXPECT_DEATH(params.GetFoundersRewardAddressAtHeight(maxHeight+1), "nHeight"); 
-}
-
 TEST(FoundersRewardTest, RegtestGetLastBlockBlossom) {
     int blossomActivationHeight = Consensus::PRE_BLOSSOM_REGTEST_HALVING_INTERVAL / 2; // = 75
     auto params = RegtestActivateBlossom(false, blossomActivationHeight).GetConsensus();
@@ -148,30 +123,8 @@ TEST(FoundersRewardTest, RegtestGetLastBlockBlossom) {
     RegtestDeactivateBlossom();
 }
 
-TEST(FoundersRewardTest, MainnetGetLastBlock) {
-    SelectParams(CBaseChainParams::MAIN);
-    const Consensus::Params& params = Params().GetConsensus();
-    int lastFRHeight = GetLastFoundersRewardHeight(params);
-    EXPECT_EQ(0, params.Halving(lastFRHeight));
-    EXPECT_EQ(1, params.Halving(lastFRHeight + 1));
-}
-
-#define NUM_MAINNET_FOUNDER_ADDRESSES 48
-
-TEST(FoundersRewardTest, Mainnet) {
-    SelectParams(CBaseChainParams::MAIN);
-    checkNumberOfUniqueAddresses(NUM_MAINNET_FOUNDER_ADDRESSES);
-}
-
-
-#define NUM_TESTNET_FOUNDER_ADDRESSES 48
-
-TEST(FoundersRewardTest, Testnet) {
-    SelectParams(CBaseChainParams::TESTNET);
-    checkNumberOfUniqueAddresses(NUM_TESTNET_FOUNDER_ADDRESSES);
-}
-
-
+// Tcoin: mainnet and testnet have no Founders' Reward (see test_tcoin_params.cpp);
+// only regtest keeps the Zcash rule, so only regtest is tested here.
 #define NUM_REGTEST_FOUNDER_ADDRESSES 1
 
 TEST(FoundersRewardTest, Regtest) {
@@ -180,56 +133,6 @@ TEST(FoundersRewardTest, Regtest) {
 }
 
 
-
-// Test that 10% founders reward is fully rewarded after the first halving and slow start shift.
-// On Mainnet, this would be 2,100,000 ZEC after 850,000 blocks (840,000 + 10,000).
-TEST(FoundersRewardTest, SlowStartSubsidy) {
-    SelectParams(CBaseChainParams::MAIN);
-    CChainParams params = Params();
-
-    CAmount totalSubsidy = 0;
-    for (int nHeight = 1; nHeight <= GetLastFoundersRewardHeight(Params().GetConsensus()); nHeight++) {
-        CAmount nSubsidy = params.GetConsensus().GetBlockSubsidy(nHeight) / 5;
-        totalSubsidy += nSubsidy;
-    }
-    
-    ASSERT_TRUE(totalSubsidy == MAX_MONEY/10.0);
-}
-
-
-// For use with mainnet and testnet which each have 48 addresses.
-// Verify the number of rewards each individual address receives.
-void verifyNumberOfRewards() {
-    CChainParams params = Params();
-    int maxHeight = GetLastFoundersRewardHeight(params.GetConsensus());
-    std::map<std::string, CAmount> ms;
-    for (int nHeight = 1; nHeight <= maxHeight; nHeight++) {
-        std::string addr = params.GetFoundersRewardAddressAtHeight(nHeight);
-        if (ms.count(addr) == 0) {
-            ms[addr] = 0;
-        }
-        ms[addr] = ms[addr] + params.GetConsensus().GetBlockSubsidy(nHeight) / 5;
-    }
-
-    EXPECT_EQ(ms[params.GetFoundersRewardAddressAtIndex(0)], 1960039937500);
-    EXPECT_EQ(ms[params.GetFoundersRewardAddressAtIndex(1)], 4394460062500);
-    for (int i = 2; i <= 46; i++) {
-        EXPECT_EQ(ms[params.GetFoundersRewardAddressAtIndex(i)], 17709 * COIN * 2.5);
-    }
-    EXPECT_EQ(ms[params.GetFoundersRewardAddressAtIndex(47)], 17677 * COIN * 2.5);
-}
-
-// Verify the number of rewards going to each mainnet address
-TEST(FoundersRewardTest, PerAddressRewardMainnet) {
-    SelectParams(CBaseChainParams::MAIN);
-    verifyNumberOfRewards();
-}
-
-// Verify the number of rewards going to each testnet address
-TEST(FoundersRewardTest, PerAddressRewardTestnet) {
-    SelectParams(CBaseChainParams::TESTNET);
-    verifyNumberOfRewards();
-}
 
 // Verify that post-Canopy, block rewards are split according to ZIP 207.
 TEST(FundingStreamsRewardTest, Zip207Distribution) {

@@ -53,7 +53,9 @@ class UNSAFE_CTransaction : public CTransaction {
 // Test that a Sprout tx with negative version is still rejected
 // by CheckBlock under Sprout consensus rules.
 TEST(CheckBlock, BlockSproutRejectsBadVersion) {
-    SelectParams(CBaseChainParams::MAIN);
+    // Tcoin: regtest, because Tcoin mainnet has no Founders' Reward addresses
+    // for the pre-Canopy coinbase built below.
+    SelectParams(CBaseChainParams::REGTEST);
 
     CMutableTransaction mtx;
     mtx.vin.resize(1);
@@ -203,12 +205,16 @@ TEST(CheckBlock, MultipleCoinbase) {
 
 class ContextualCheckBlockTest : public ::testing::Test {
 protected:
+    // Tcoin: these tests exercise the pre-Canopy rules at height 1 (Sprout
+    // blocks, Founders' Reward). Tcoin mainnet activates every upgrade at
+    // height 1 and has no Founders' Reward, so they run on regtest, where no
+    // upgrade is active unless a test activates it.
     void SetUp() override {
-        SelectParams(CBaseChainParams::MAIN);
+        SelectParams(CBaseChainParams::REGTEST);
     }
 
     void TearDown() override {
-        // Revert to test default. No-op on mainnet params.
+        // Revert to test default: no upgrade active on regtest.
         RegtestDeactivateBlossom();
     }
 
@@ -321,7 +327,7 @@ TEST_F(ContextualCheckBlockTest, BadCoinbaseHeight) {
 // Overwinter-Overwinter, and Sapling-Sapling.
 
 // Test block evaluated under Sprout rules will accept Sprout transactions.
-// This test assumes that mainnet Overwinter activation is at least height 2.
+// This test assumes that Overwinter is not active at height 1 (regtest default).
 TEST_F(ContextualCheckBlockTest, BlockSproutRulesAcceptSproutTx) {
     CMutableTransaction mtx = GetFirstBlockCoinbaseTx();
 
@@ -404,7 +410,7 @@ TEST_F(ContextualCheckBlockTest, BlockBlossomRulesAcceptBlossomTx) {
 
 // Test that a block evaluated under Sprout rules cannot contain non-Sprout
 // transactions which require Overwinter to be active.  This test assumes that
-// mainnet Overwinter activation is at least height 2.
+// Overwinter is not active at height 1 (regtest default).
 TEST_F(ContextualCheckBlockTest, BlockSproutRulesRejectOtherTx) {
     CMutableTransaction mtx = GetFirstBlockCoinbaseTx();
 

@@ -23,9 +23,9 @@ TEST(Keys, EncodeAndDecodeSapling)
         auto sk = m.Derive(i | HARDENED_KEY_LIMIT);
         {
             std::string sk_string = keyIO.EncodeSpendingKey(sk);
-            EXPECT_EQ(
-                sk_string.substr(0, 24),
-                Params().Bech32HRP(CChainParams::SAPLING_EXTENDED_SPEND_KEY));
+            // Compare as many characters as the network's prefix has.
+            const std::string& hrp = Params().Bech32HRP(CChainParams::SAPLING_EXTENDED_SPEND_KEY);
+            EXPECT_EQ(sk_string.substr(0, hrp.size()), hrp);
 
             auto spendingkey2 = keyIO.DecodeSpendingKey(sk_string);
             EXPECT_TRUE(spendingkey2.has_value());
@@ -37,9 +37,9 @@ TEST(Keys, EncodeAndDecodeSapling)
         {
             auto extfvk = sk.ToXFVK();
             std::string vk_string = keyIO.EncodeViewingKey(extfvk);
-            EXPECT_EQ(
-                vk_string.substr(0, 7),
-                Params().Bech32HRP(CChainParams::SAPLING_EXTENDED_FVK));
+            // Compare as many characters as the network's prefix has.
+            const std::string& hrp = Params().Bech32HRP(CChainParams::SAPLING_EXTENDED_FVK);
+            EXPECT_EQ(vk_string.substr(0, hrp.size()), hrp);
 
             auto viewingkey2 = keyIO.DecodeViewingKey(vk_string);
             EXPECT_TRUE(viewingkey2.has_value());
@@ -52,9 +52,9 @@ TEST(Keys, EncodeAndDecodeSapling)
             auto addr = sk.ToXFVK().DefaultAddress();
 
             std::string addr_string = keyIO.EncodePaymentAddress(addr);
-            EXPECT_EQ(
-                addr_string.substr(0, 2),
-                Params().Bech32HRP(CChainParams::SAPLING_PAYMENT_ADDRESS));
+            // Compare as many characters as the network's prefix has.
+            const std::string& hrp = Params().Bech32HRP(CChainParams::SAPLING_PAYMENT_ADDRESS);
+            EXPECT_EQ(addr_string.substr(0, hrp.size()), hrp);
 
             auto paymentaddr2 = keyIO.DecodePaymentAddress(addr_string);
             EXPECT_TRUE(paymentaddr2.has_value());
