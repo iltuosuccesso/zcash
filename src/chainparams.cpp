@@ -403,18 +403,17 @@ public:
         nDefaultPort = 18455;
         nPruneAfterHeight = 1000;
 
-        // Tcoin: the genesis block has not been mined yet. Its Equihash
-        // solution is produced by the TcoinGenesis gtest (see
-        // src/gtest/test_tcoin_genesis.cpp) and pasted here together with
-        // nTime, nNonce and the resulting hashes; until then the solution is
-        // empty and init refuses to start a node on this network.
+        // Tcoin: testnet genesis block, mined on 2026-09-25 by the TcoinGenesis
+        // gtest (src/gtest/test_tcoin_genesis.cpp).
         genesis = CreateGenesisBlock(
             TCOIN_GENESIS_TIMESTAMP,
-            0,
-            uint256(),
-            {},
+            1790332387,
+            uint256S("0x0000000000000000000000000000000000000000000000000000000000000008"),
+            ParseHex("07511fb3166c195d2a9eb12b924494068b21c96bc6f3ffbd890967ff8aae5d62ebd813be2ac84e7ef495f472730ed19e126d0eeac6fcbda7e49f409b3a04646e39ece56fd2236fb13108a2368afd59469c528692f5eb713875bb9e0bfffec69543dcb39f"),
             0x2007ffff, 4, 0);
         consensus.hashGenesisBlock = genesis.GetHash();
+        assert(consensus.hashGenesisBlock == uint256S("0x046ff4a16721f9967814733efc2a782ef29cfb132ba16332162f298a9b6c3544"));
+        assert(genesis.hashMerkleRoot == uint256S("0x74fe6896cfee6f68b61aa92ddd2516ae87ec201f17c5d531a6889ae7cee7ccec"));
 
         // Tcoin: no DNS seeds yet. The seed node will be listed in
         // chainparamsseeds.h (contrib/seeds) once it has a public address.
@@ -446,7 +445,11 @@ public:
         // valid. The list must be filled before launch: while it is empty,
         // init refuses to start a node on this network, because anyone could
         // mine it.
-        vBlockSignerPubKeys = {};
+        vBlockSignerPubKeys = {
+            // Testnet signer, generated on 2026-09-25 on the build VM (tcoin-build).
+            // A test key: it is not used on mainnet.
+            CPubKey(ParseHex("02ca63cdca4b730f4953d57040a9e6a33aaac0f631b68d86d3451789268a89ed3e")),
+        };
 
         // Tcoin: no Founders' Reward. Canopy is active from block 1, which
         // switches the Founders' Reward rule off, and the list stays empty so
